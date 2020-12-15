@@ -1,76 +1,50 @@
-const container = document.querySelector(".container");
-const seats = document.querySelectorAll(".row .seat:not(.occupied)");
-const count = document.getElementById("count");
-const total = document.getElementById("total");
-const movieSelect = document.getElementById("movie");
+const search = document.getElementById("search"),
+  submit = document.getElementById("submit"),
+  random = document.getElementById("random"),
+  mealsEl = document.getElementById("meals"),
+  resultHeading = document.getElementById("result-heading"),
+  single_mealEl = document.getElementById("single-meal");
 
-populateUI();
+// Search meal and fetch from API
+function searchMeal(e) {
+  e.preventDefault();
 
-//the + makes the string a number, same as using parseInt
-let ticketPrice = +movieSelect.value;
+  // Clear single meal
+  single_mealEl.innerHTML = "";
 
-// Save selected movie index and price
-function setMovieData(movieIndex, moviePrice) {
-  localStorage.setItem("selectedMovieIndex", movieIndex);
-  localStorage.setItem("selectedMoviePrice", moviePrice);
-}
+  // Get search term
+  const term = search.value;
 
-// Update total and count
-function updateSelectedCount() {
-  const selectedSeats = document.querySelectorAll(".row .seat.selected");
+  // Check for empty
+  if (term.trim()) {
+    fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${term}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data);
+        resultHeading.innerHTML = `<h2>Search result for '${term}':</h2>`;
 
-  // Copy selected seats into array
-  // Map through that array
-  // Return a new array indexes
-  const seatsIndex = [...selectedSeats].map((seat) => {
-    return [...seats].indexOf(seat);
-  });
-
-  localStorage.setItem("selectedSeats", JSON.stringify(seatsIndex));
-
-  const selectedSeatsCount = selectedSeats.length;
-
-  count.innerText = selectedSeatsCount;
-  total.innerText = selectedSeatsCount * ticketPrice;
-}
-
-// Get data from LocalStorage and populate UI
-function populateUI() {
-  const selectedSeats = JSON.parse(localStorage.getItem("selectedSeats"));
-
-  if (selectedSeats !== null && selectedSeats.length > 0) {
-    seats.forEach((seat, index) => {
-      if (selectedSeats.indexOf(index) > -1) {
-        seat.classList.add("selected");
-      }
-    });
-  }
-
-  const selectedMovieIndex = localStorage.getItem("selectedMovieIndex");
-
-  if (selectedMovieIndex !== null) {
-    movieSelect.selectedIndex = selectedMovieIndex;
+        if (data.meals === null) {
+          resultHeading.innerHTML = `<p>There are not search results. Try again!</p>`;
+        } else {
+          mealsEl.innerHTML = data.meals
+            .map(
+              (meal) => `<div class="meal">
+          <img src="${meal.strMealThumb}" alt="${meal.strMeal}" />
+            <div class="meal-info" data-mealID=${meal.idMeal}">
+             <h3>${meal.strMeal}</h3>
+          </div>
+          </div>
+          `
+            )
+            .join("");
+        }
+      });
+    // Clear search text
+    search.value = "";
+  } else {
+    alert("Please enter a search term");
   }
 }
 
-// Movie select event
-movieSelect.addEventListener("change", (e) => {
-  ticketPrice = +e.target.value;
-  setMovieData(e.target.selectedIndex, e.target.value);
-  updateSelectedCount();
-});
-
-// Seat click event
-container.addEventListener("click", (e) => {
-  if (
-    e.target.classList.contains("seat") &&
-    !e.target.classList.contains("occupied")
-  ) {
-    e.target.classList.toggle("selected");
-
-    updateSelectedCount();
-  }
-});
-
-// Initial count and total set
-updateSelectedCount();
+// Event listeners
+submit.addEventListener("submit", searchMeal);
